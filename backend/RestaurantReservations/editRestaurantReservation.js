@@ -18,6 +18,7 @@ exports.handler = async (event) => {
       reservationDate,
       requiredCapacity,
       userId,
+      isApproved,
     } = reservationDetails;
 
     const reservationDocRef = db
@@ -59,10 +60,10 @@ exports.handler = async (event) => {
 
     console.log(currentReservationData);
     if ((reservationUtcDate - currentUtcDate) / (1000 * 60) >= 60) {
-      const response = await axios.get(
-        `https://jrcigezb1g.execute-api.us-east-1.amazonaws.com/restaurants/${currentReservationData.restaurant_id}`
-      );
-      const restaurantDetails = response.data;
+      const restaurantDoc = db.collection("Restaurants").doc(restaurantId);
+      const response = await restaurantDoc.get();
+
+      const restaurantDetails = response.data();
 
       if (
         currentReservationData.restaurant_id !== restaurantDetails.restaurant_id
@@ -117,6 +118,10 @@ exports.handler = async (event) => {
 
         if (userId) {
           updatedReservation.user_id = userId;
+        }
+
+        if (isApproved !== undefined && isApproved !== null) {
+          updatedReservation.isApproved = isApproved;
         }
 
         await reservationDocRef.update(updatedReservation);

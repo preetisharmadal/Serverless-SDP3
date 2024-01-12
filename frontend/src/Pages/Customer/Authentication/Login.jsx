@@ -1,16 +1,23 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth, provider } from "./firebase.js";
+import { auth, db, provider } from "./firebase.js";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 import { theme } from "../../../theme.jsx";
 import { Flex } from "@chakra-ui/react";
 import { showToastError, showToastSuccess } from "../../../Components/Toast.js";
+import { collection, doc, getDoc, setDoc } from "firebase/firestore";
+import RestaurantPopup from "../../../Components/RestaurantPopup.jsx";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  // const [error, setError] = useState("");
+  const [showRestaurantModal, setShowRestaurantModal] = useState(false);
   let navigate = useNavigate();
+  const signupType = location.pathname.includes("admin")
+    ? "admin"
+    : location.pathname.includes("user")
+    ? "user"
+    : "partner";
 
   const signIn = (e) => {
     e.preventDefault();
@@ -18,12 +25,10 @@ const Login = () => {
       showToastError("Please enter email and password");
       return;
     }
+
     signInWithEmailAndPassword(auth, email, password)
-      .then((result) => {
-        sessionStorage.setItem("userDetails", email);
-        sessionStorage.setItem("uId", result?.user?.uid ?? "");
-        showToastSuccess("Login Successful");
-        navigate("/restaurantList");
+      .then(async (result) => {
+        handleSignInSuccess(result);
       })
       .catch((error) => {
         showToastError("Invalid credentials");
@@ -33,15 +38,98 @@ const Login = () => {
 
   const signInWithGoogle = () => {
     signInWithPopup(auth, provider)
-      .then((result) => {
-        sessionStorage.setItem("userDetails", true);
-        sessionStorage.setItem("uId", result?.user?.uid ?? "");
-        showToastSuccess("Login Successful");
-        navigate("/restaurantList");
+      .then(async (result) => {
+        await storeUserDetails(result.user.uid, {
+          uid: result.user.uid,
+          userType: signupType,
+          email: result.user.email,
+        });
+        handleSignInSuccess(result);
       })
       .catch((error) => {
         showToastError("Error Logging in!");
       });
+  };
+
+  const storeUserDetails = async (uid, details) => {
+    const userCollectionRef = collection(db, "userDetails");
+    const userDocRef = doc(userCollectionRef, uid);
+
+    await setDoc(userDocRef, details, { merge: true });
+  };
+
+  const handleSignInSuccess = async (result) => {
+    let userData = {
+      uid: result.user.uid,
+      email: result.user.email,
+      userType: signupType,
+    };
+
+    const docRef = doc(db, "userDetails", result.user.uid);
+    const docSnap = await getDoc(docRef);
+    const userDetails = docSnap.data();
+
+    const isValid = checkUserType(userDetails);
+    if (isValid) {
+      if (signupType === "partner") {
+        userData = {
+          ...userData,
+          restaurant_id: userDetails?.restaurant_id ?? "",
+          restaurant_name: userDetails?.restaurant_name ?? "",
+        };
+      }
+
+      postSignIn(userData);
+    }
+  };
+
+  const checkUserType = (userDetails) => {
+    if (
+      (signupType === "partner" || signupType === "admin") &&
+      userDetails?.userType === "user"
+    ) {
+      showToastError(
+        "Invalid user. Please login as a customer. Redirecting..."
+      );
+      navigate("/user/login");
+      return false;
+    } else if (
+      (signupType === "partner" || signupType === "user") &&
+      userDetails?.userType === "admin"
+    ) {
+      showToastError("Invalid user. Please login as a admin. Redirecting...");
+      window.open("https://sdp3-app-admin-ego5ocsnya-uc.a.run.app/");
+      return false;
+    } else if (
+      (signupType === "admin" || signupType === "user") &&
+      userDetails?.userType === "partner"
+    ) {
+      showToastError("Invalid user. Please login as a partner. Redirecting...");
+      navigate("/partner/login");
+      return false;
+    }
+
+    return true;
+  };
+
+  const postSignIn = (userData) => {
+    sessionStorage.setItem(
+      "userDetails",
+      JSON.stringify({
+        ...userData,
+      })
+    );
+    sessionStorage.setItem("uId", userData?.uid ?? "");
+    showToastSuccess("Login Successful");
+    if (signupType === "partner") {
+      if (!userData?.restaurant_id) {
+        setShowRestaurantModal(true);
+      } else {
+        navigate("/dashboard");
+      }
+    } else {
+      navigate("/restaurantList");
+    }
   };
 
   return (
@@ -52,12 +140,21 @@ const Login = () => {
       alignItems="center"
       justifyContent="start"
     >
+      <RestaurantPopup
+        show={showRestaurantModal}
+        handleClose={() => setShowRestaurantModal(false)}
+      />
       <main className="form-signin w-100 m-auto">
         <form onSubmit={signIn}>
           <h1
             className="h3 mb-3 fw-normal"
             style={{ color: theme.secondaryBackground }}
           >
+            {signupType === "admin"
+              ? "Admin"
+              : signupType === "partner"
+              ? "Partner"
+              : "Customer"}{" "}
             Please sign in
           </h1>
 
@@ -95,14 +192,12 @@ const Login = () => {
         </form>
 
         <button className="google-btn" onClick={signInWithGoogle}>
-          <span>
-            <img
-              className="google-icon"
-              src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg"
-              alt="google-icon"
-            />
-            <p className="btn-text">Sign in with Google</p>
-          </span>
+          <img
+            className="google-icon"
+            src="/google-logo.png"
+            alt="google-icon"
+          />
+          <p className="btn-text">Sign in with Google</p>
         </button>
       </main>
     </Flex>

@@ -11,6 +11,11 @@ import Restaurant from "./Pages/Customer/Restaurant/Restaurant";
 import RestaurantList from "./Pages/Customer/Restaurant/RestaurantList";
 import ReservationForm from "./Pages/Customer/Reservation/ReservationForm";
 import KommunicateChat from "./Pages/Customer/ChatBot/chat";
+import Reservations from "./Pages/Customer/Reservation/Reservations";
+import DisplayMenu from "./Pages/Partner/Menu/DisplayMenu";
+import RestaurantMenuManager from "./Pages/Partner/Menu/RestaurantMenuManager";
+import Dashboard from "./Pages/Partner/Dashboard/Dashboard";
+import RestaurantForm from "./Pages/Customer/Restaurant/RestaurantForm";
 
 const router = createBrowserRouter([
   {
@@ -44,6 +49,15 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "/restaurant/:restaurant_id",
+        element: (
+          <>
+            <Restaurant />
+            <KommunicateChat />
+          </>
+        ),
+      },
+      {
         path: "/customer/menu/:restaurantId/:reservationId",
         element: (
           <>
@@ -54,7 +68,66 @@ const router = createBrowserRouter([
       },
       {
         path: "/restaurant/book",
-        element: <ReservationForm />,
+        element: (
+          <>
+            <KommunicateChat />
+            <ReservationForm />
+          </>
+        ),
+      },
+      {
+        path: "/restaurant/reservations",
+        element: (
+          <>
+            <KommunicateChat />
+            <Reservations />
+          </>
+        ),
+      },
+      {
+        path: "/restaurant/book/:reservationId",
+        element: (
+          <>
+            <KommunicateChat />
+            <ReservationForm />
+          </>
+        ),
+      },
+      {
+        path: "/partner/menu/:restaurantId",
+        element: (
+          <>
+            <KommunicateChat />
+            <DisplayMenu />
+          </>
+        ),
+      },
+      {
+        path: "/customer/menu/:restaurantId",
+        element: (
+          <>
+            <KommunicateChat />
+            <DisplayMenu />
+          </>
+        ),
+      },
+      {
+        path: "/partner/manage-menu/:restaurantId",
+        element: (
+          <>
+            <KommunicateChat />
+            <RestaurantMenuManager />
+          </>
+        ),
+      },
+      {
+        path: "/dashboard",
+        element: (
+          <>
+            <KommunicateChat />
+            <Dashboard />
+          </>
+        ),
       },
     ],
   },
@@ -71,8 +144,30 @@ const router = createBrowserRouter([
         ),
       },
       {
+        path: "/partner/login",
+        element: (
+          <>
+            <Login />
+            <KommunicateChat />
+          </>
+        ),
+      },
+      {
         path: "/user/signup",
         element: <SignUp />,
+      },
+      {
+        path: "/partner/signup",
+        element: <SignUp />,
+      },
+      {
+        path: "/restaurantForm",
+        element: (
+          <>
+            <RestaurantForm />
+            <KommunicateChat />
+          </>
+        ),
       },
     ],
   },
